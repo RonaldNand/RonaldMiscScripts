@@ -1,29 +1,44 @@
 #!/bin/bash
 
-function interrupt_script () {
-	echo the script is terminated
-	exit
+# Use the command: pkill -QUIT <name_of_script_file>
+# To send interrupt to process
+
+lock_file="/tmp/my_script.lock"
+
+run_script=true
+
+# Check if the lock file exists
+if [ -e "$lock_file" ]; then
+    echo "Another iteration of the script is already running. Exiting."
+    exit 1
+else
+    # Create the lock file
+    touch "$lock_file"
+fi
+
+# Set Script FLAG to false on SIGQUIT Signal
+function finish_script () {
+	run_script=false
+	echo "The script will terminate upon completion of current task"
 }
 
-function beginnings () {
-	# Directory to scan
-	directory="/path/to/your/directory"
+trap finish_script SIGQUIT
 
-	# Loop through video files in the directory
-	for file in "$directory"/*.mp4; do
-	  if [ -f "$file" ]; then
-		codec=$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$file")
-		if [ "$codec" = "h264" ]; then
-		  echo "x264 video detected: $file"
-		fi
-	  fi
-}
 
-trap interrupt_script SIGINT
-
-while true
+# Include Code Here
+for i in {1..300}
 do
-    echo Test
     sleep 1
+	echo "Number: $i"
+	if ! $run_script; then 
+		rm -f "$lock_file"
+		exit 0
+	fi
 done
 
+# Upon Completion remove the lock file 
+
+rm -f "$lock_file"
+echo "All Tasks Complete!"
+
+exit 0 
